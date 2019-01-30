@@ -76,23 +76,41 @@ details."
 	   ))
 
 
+
 (defun treasure-find (my-map cmds)
-  "Look in MY-MAP to find cmds and make a hydra
+  "Look in MY-MAP to find CMDS and extract them into a list.
+
+This function takes a keyamp as MY-MAP and a list, CMDS, consisting
+of either string characters like \"g\" or symbols like 'grep indicating
+commands you want to extract out.
+
+Matches from CMDS which are found in my-map are put into the output
+list in the form (key cmd doc) where key is the key in my-map to
+run the cmd and doc is the first line of its docstring.
+
+This is useful as an intermediate tool to extract valuable commands
+from a keymap.
   "
-  (let ((fixme nil))
-    (map-keymap (lambda (key target) 
-		  (if (and (symbolp target) (member (format "%c" key) cmds))
-		      (progn (setq fixme (cons 
-					  (list (format "%c" key) target
-						(nth 0 (split-string (documentation target) "\n")))
-					  fixme))
-			     )
-		    ;;   (message "key is %s and target is %s with doc %s" key target
-		    ;;     (nth 0 (split-string (documentation 'quoted-insert) "\n")))
-		    ;; (message "skip %s %s" key target)
-		    )
-		  ) my-map)
-    fixme)
+  (let ((results nil))
+    (map-keymap
+     (lambda (key target)
+       (if (or (and (symbolp target)
+		    (member
+		     (if (integerp key) (format "%c" key) key)
+		     cmds))
+	       (member target cmds))
+	   (progn
+	     (setq results
+		   (cons (list
+			  (if (integerp key)
+			      (format "%c" key) key) target
+			  (nth 0 (split-string (documentation target) "\n")))
+			 results))
+	     )
+	 ;;(message "skip key=%s target=%s" key target)
+	 )
+       ) my-map)
+    results)
   )
 
 ;; if do-add is a character we add the new hydra to treasure-for-hydra
@@ -109,6 +127,37 @@ details."
       )
     )
   )
+
+
+(defun treasure-setup (key cmd &optional help)
+  (list key cmd
+	(if help help
+	  (nth 0 (split-string (documentation cmd) "\n"))))
+  )
+
+  
+;; if do-add is a character we add the new hydra to treasure-for-hydra
+;; with the given character binding
+(defun treasure-make-hoard (name hydra-data &optional hydra-help do-add)
+  (let* ((hydra-info
+	  (mapcar
+	   (lambda (item) (apply 'treasure-setup item))
+	   hydra-data))
+	 (hydra-body
+	  `(defhydra ,name (:color teal :columns 1)
+	     ,(format (if hydra-help hydra-help
+			"Define a treasure for hydra %s" name))
+	     ,@(mapcar (lambda (x) x) hydra-info))))
+   ;; (message hydra-info)
+    (eval hydra-body)
+    (if do-add 
+	(treasure-add-hydra
+	 (list do-add (intern (format "%s/body" name)) 
+	       (if hydra-help hydra-help (format "hydra for %s"name))))
+      )
+    )
+  )
+
 
 (treasure-for-hydra 'hydra-test-fixme my-mode-map 
 		    (list "a" "g" "f" "h") "o" "Example dynamic hydra")
