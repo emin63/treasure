@@ -11,17 +11,12 @@ expected by defhydras. The simplest form is (KEY CMD MSG) where KEY
 is the key that triggers the hydra, CMD is the command to run, and
 MSG is the message to show next to KEY.
 
-You should generally makes sure there is a quit command in this list.
-For example, the default starting value is
+You can then call treasure-bind-master-hydra to create a master hydra
+to access all hydras you have added to treasure-map-hydras.
 
-    ((\"q\" (message \"quiting hydra\") \"quit hydra\" :exit t :color blue))
-
-which makes sure that the \"q\" shows the hint \"quit hydra\" and
-prints the \"quitting hydra\" message when pressed while exiting.
-
-It is probably best if you only modify this using the treasure-add-hydra
-function for safety. See docs for the treasure-add-hydra function for
-details."
+NOTE: It is probably best if you only modify this using the
+treasure-add-hydra function for safety. See docs for the
+treasure-add-hydra and treasure-bind-master-hydra for details."
   )
 
 (defun treasure-add-hydra (hlist)
@@ -153,18 +148,26 @@ from a keymap.
   )
 
 
-(defun treasure-bind-master-hydra ()
+(defun treasure-bind-master-hydra (&optional noaddquit)
   "Bind the master hydra.
 
 This will use eval to create hydra-treasure-map/body
 "
-  (eval `(defhydra hydra-treasure-map (:color teal :columns 1)
-	   "Master hydra
-
-Top-level hydra created by treasure-bind-master-hydra
-to show your hydras.
+  (let ((clean-hdata treasure-map-hydras)
+	)
+    (if (not noaddquit)
+	(if (member "q" (mapcar 'car clean-hdata))
+	    (error "Cannot add quit command; treasure-map-hydras has 'q' cmd")
+	  (setq clean-hdata
+		(append clean-hdata
+			'(("q" (message "Exiting hydra")
+			   "quit hydra" :color blue))))))
+    (message "noqddquit=%s hdata=%s" noaddquit clean-hdata)
+    (eval `(defhydra hydra-treasure-map (:color teal :columns 1)
+	     "Top-level hydra to show your hydras.
 "
-	   ,@(mapcar (lambda (x) x) treasure-map-hydras)))
+	     ,@(mapcar (lambda (x) x) clean-hdata)))
+    )
   )
 
 (provide 'treasure)
