@@ -74,6 +74,13 @@ the treasure-map-hydras variable.
   )
 
 (defun treasure-hydra-doc (body spc)
+  "Create a documentation string for hydrsa with given spacing.
+
+This function manually creates a 1-column documentation string from
+the given hydra BODY with a line spacing given by SPC. This can be
+nice to make things easier to read but may not have all the bells
+and whistles of the standard automatic hydra documentation string.
+"
   (let ((result '("\nHydra info"))
 	)
     (dolist (item body)
@@ -183,7 +190,7 @@ PLIST ARGUMENS:
                   to the top hydra-treasure-map/body. If this is non-nil
                   we do not add a top element.
   :hdoc-spc nil   If non-nil and non-zero, manually create hydra doc 
-                  with line spacing hdoc-spc.
+                  with line spacing hdoc-spc by calling treasure-hydra-doc.
 "
   (let* ((no-top (plist-get body-plist :no-top))
 	 (hdoc-spc (plist-get body-plist :hdoc-spc))
