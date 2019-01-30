@@ -1,0 +1,85 @@
+
+
+* Introduction
+
+The treasure package is a tool for helping to make valuable things
+more easily discoverable. To use treasure, you do the following:
+
+  1. Install the =treasure.el= file in the usual way.
+  2. Put =(require 'treasure)= somewhere in your init files.
+  3. Call =(treasure-add-hydra HLIST)= where HLIST is your hydra
+     definition.
+  4. Repeat the above for various hydras.
+  5. Call =hydra-treasure-map/body= (or bind it to a key).
+
+
+* Usage
+
+After you install, make sure you require the =treasure= package
+somewhere in your init scripts:
+#+begin_src emacs-lisp :exports code
+(require 'treasure)
+#+end_src
+
+** Simple Example
+
+The simplest way to use the =treasure= package is to create a hydra to
+show how to get some valuable commands in a given keymap:
+#+begin_src emacs-lisp :exports code :results none
+(treasure-for-hydra 'hydra-my-help help-map 
+    (list "g" 'where-is "f" "h" "a"))
+(global-set-key "\C-qp" 'hydra-my-help/body) ;; replace w/ your own binding
+#+end_src
+The code above looks in =help-map=, finds commands which either match a
+given key like ="g"= or which match the symbol for a function
+like ='where-is= and creates a hydra to show these commands. When you
+hit ="C-q p"= (or whatever key you bind to the newly created hydra),
+you will see a list of the desired commands in your mini-buffer along
+with a one line description of each.
+
+** Example without keymaps
+
+The simplest example shown previously is nice because it is extremely
+easy to setup and can grab things from your favorite keymaps. But you
+may want to collect together valuable commands from multiple places
+and not just keymaps. In that case, you can setup your own hydra via
+something like the following:
+#+begin_src emacs-lisp :exports code :results none
+(treasure-make-hoard 'hydra-treasure-projectile
+  '(
+   ("s" projectile-switch-project "Switch projectile project; USEFUL!")
+   ("k" projectile-kill-buffers "Kill all project buffers; BE CAREFUL!")
+   ("g" projectile-grep)
+   ("m" magit)  ;; note that this is not from projectile keymap
+   ("q" (message "exited hydra") "quit hydra")
+  )
+ "Useful commands for project management"
+)
+(global-set-key "\C-qp" 'hydra-treasure-projectile/body)
+#+end_src
+
+Here we create a hydra with only a few of our favorite commands.
+The =s= key is bound to =projectile-switch-project= and we provide our
+own doc string for that binding. We do something similar for
+the =projectile-kill-buffers= command but for =projectile-grep= we
+provide no docstring. In this case, =treasure-make-hoard= will
+automatically look at the first line of the docstring for the given
+command and use that. Note that we finish with an entry for =q= to
+quit the hydra. Finally, we bind the newly created hydra to
+the key =C-q p= (feel free to choose your own binding of course).
+
+Now when we type =C-q p= we get a mini-buffer display of the form
+#+BEGIN_EXAMPLE
+Useful commands for using projectile
+s: Switch projectile project; USEFUL!
+k: Kill all project buffers; BE CAREFUL!
+g: Perform rgrep in the project
+q: quit hydra
+#+END_EXAMPLE
+and we can choose the key for the desired command.
+
+
+
+
+
+
