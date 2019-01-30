@@ -38,6 +38,12 @@ the treasure-map-hydras variable.
 				      (list hlist))))
   )
 
+(defun treasure-say-exit ()
+  "Say we are exiting and show a message"
+  (interactive)
+  (message "Exiting hydra")
+  )
+
 (defhydra hydra-treasure-map-help (:color teal :columns 1)
   "Show help for hydra treasure map
 
@@ -48,7 +54,7 @@ the treasure-map-hydras variable.
   ("b" hydra-treasure-map/body "Back to top of hydra-treasure-map")
   ("e" (treasure-show-example) "show example hydra definition")
   ("h" treasure-describe-hydras "tell me more about hydras")
-  ("q" (message "quit") "quit" :color blue)
+  ("q" treasure-say-exit "quit")
   )
 
 (defun treasure-show-example ()
@@ -65,6 +71,21 @@ the treasure-map-hydras variable.
     )
 
       ")
+  )
+
+(defun treasure-hydra-doc (body spc)
+  (let ((result '("\nHydra info"))
+	)
+    (dolist (item body)
+      (message "doing %s" item)      
+      (setq result
+	    (append result
+		    (list (format "_%s_: %s\n" (nth 0 item) (nth 2 item)))
+		    )
+	    )
+      )
+    (string-join result (make-string spc ?\n))
+    )
   )
 
 
@@ -134,8 +155,9 @@ the first line of the doc string in CMD.
   
 ;; if do-add is a character we add the new hydra to treasure-map-hydras
 ;; with the given character binding
-(defun treasure-make-hoard (name hydra-data
-				 &optional hydra-help do-add no-top)
+(defun treasure-make-hoard (name hydra-data &optional
+				 hydra-help do-add
+				 &rest body-plist)
   "Make a hydra to watch over a hoard of useful commands.
 
 The following are the arguments:
@@ -154,25 +176,57 @@ Optional Arguments:
   DO-ADD:      If this is a string key, then we call treasure-add-hydra
                with DO-ADD as the key and the new hydra so you don't
                have to manually do that.
-  NO-TOP:      If this is nil we add an entry to take the hydra back
-               to the top hydra-treasure-map/body. If this is non-nil
-               we do not add a top element.
+
+PLIST ARGUMENS:
+
+  :no-top nil     If this is nil we add an entry to take the hydra back
+                  to the top hydra-treasure-map/body. If this is non-nil
+                  we do not add a top element.
+  :hdoc-spc nil   If non-nil and non-zero, manually create hydra doc 
+                  with line spacing hdoc-spc.
 "
-  (let* ((hydra-info-base
-	  (mapcar
+  (let* ((no-top (plist-get body-plist :no-top))
+	 (hdoc-spc (plist-get body-plist :hdoc-spc))
+	 (fixme (message "hdoc-spc is %s with plist %s" hdoc-spc body-plist));;fixme
+	 (hydra-plist '(:color teal :columns 1))
+	 (hydra-info-w-top       ;; optional add command to go to top
+	  (if no-top hydra-data  ;; provide no-top is nil
+	    (append hydra-data   ;; by appending to hydra-data
+		    '(("!" hydra-treasure-map/body
+		       "Back to top-level hydra-treasure-map")))))
+	 (hydra-info  ;; Create they hydra-info for the body by
+	  (mapcar     ;; applying treasure-setup to find docs
 	   (lambda (item) (apply 'treasure-setup item))
-	   hydra-data))
-	 (hydra-info (if no-top hydra-info-base
-		       (append hydra-info-base
-			       '(("!" hydra-treasure-map/body
-				  "Back to top-level hydra-treasure-map")))))
-	 (hydra-body
-	  `(defhydra ,name (:color teal :columns 1)
-	     ,(format (if hydra-help hydra-help
-			"Define a treasure for hydra %s"
-			(if (symbolp name) (symbol-name name) name)))
-	     ,@(mapcar (lambda (x) x) hydra-info))))
-   ;; (message hydra-info)
+	   hydra-info-w-top))
+	 (hydra-docstring ;; Setup the hydra's docstring if not given
+	  (format (if hydra-help hydra-help
+		    "Define a treasure for hydra %s"
+		    (if (symbolp name)
+			(symbol-name name) name))))
+	 (hydra-body nil)
+	 )
+    ;; Prepare things if asked to use treasure-hydra-doc -----------
+    (if (and hdoc-spc (> hdoc-spc 0)) ;; we are being asked to manually
+	                                ;; create hydra docs
+	(progn             ;; 
+	  (setq hydra-plist     ;; take out :columns so don't bust from plist
+		'(:color teal)) ;; otherwise defhydra will throw error
+	  (setq hydra-docstring ;; use treasure-hydra-doc to create our own
+		(treasure-hydra-doc hydra-info hdoc-spc)) ;; docstring
+	  (setq hydra-info      ;; strip out docs from each command so that
+ 		(mapcar (lambda (x) ;; we do not have duplicates
+			  (list (nth 0 x) (nth 1 x) nil))
+			hydra-info))
+	  )
+      )
+    ;; ------- Finish preparing to use treasure-hydra-doc ---------
+    ;;
+                       ;; In creating hydra-body remove that ,<thing> means to
+    (setq hydra-body   ;; to eval <thing> inside backquote and ,@ means as list
+	  `(defhydra ,name ,hydra-plist 
+	     ,hydra-docstring
+	     ,@(mapcar (lambda (x) x) hydra-info))
+	  )
     (eval hydra-body)
     (if do-add 
 	(treasure-add-hydra
@@ -204,12 +258,12 @@ command to the master hydra
 	    (error "Cannot add quit command; treasure-map-hydras has 'q' cmd")
 	  (setq clean-hdata
 		(append clean-hdata
-			'(("q" (message "Exiting hydra")
+			'(("q" treasure-say-exit
 			   "quit hydra"))))))
     (treasure-make-hoard 'hydra-treasure-map clean-hdata
 			 "Top-level hydra to show your hydras.
 "
-			 nil 't
+			 nil :no-top 't
 			 )
     )
   )
