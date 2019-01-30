@@ -1,6 +1,8 @@
 
 
-;;(makunbound 'treasure-map-hydras) ;; uncomment when testing for reloading
+(defvar treasure-version
+  "Version of your treasure installation."
+  "1.0")
 
 (defvar treasure-map-hydras 
   '(("q" (message "quit") "quit hydra" :exit t :color blue))
