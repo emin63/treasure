@@ -27,7 +27,7 @@ The simplest way to use the =treasure= package is to create a hydra to
 show how to get some valuable commands in a given keymap:
 #+begin_src emacs-lisp :exports code :results none
 (treasure-for-hydra 'hydra-my-help help-map 
-    (list "g" 'where-is "f" "h" "a"))
+    (list "g" 'where-is "f" "k" "a"))
 (global-set-key "\C-qp" 'hydra-my-help/body) ;; replace w/ your own binding
 #+end_src
 The code above looks in =help-map=, finds commands which either match a
@@ -45,7 +45,7 @@ may want to collect together valuable commands from multiple places
 and not just keymaps. In that case, you can setup your own hydra via
 something like the following:
 #+begin_src emacs-lisp :exports code :results none
-(treasure-make-hoard 'hydra-treasure-projectile
+(treasure-make-hoard 'hydra-treasure-proj
   '(
    ("s" projectile-switch-project "Switch projectile project; USEFUL!")
    ("k" projectile-kill-buffers "Kill all project buffers; BE CAREFUL!")
@@ -55,7 +55,7 @@ something like the following:
   )
  "Useful commands for project management"
 )
-(global-set-key "\C-qp" 'hydra-treasure-projectile/body)
+(global-set-key "\C-qp" 'hydra-treasure-proj/body)
 #+end_src
 
 Here we create a hydra with only a few of our favorite commands.
@@ -78,6 +78,26 @@ q: quit hydra
 #+END_EXAMPLE
 and we can choose the key for the desired command.
 
+
+** One hydra to rule them all
+
+If you create many hydras, it's useful to collect them all into one
+master hydra. One way to do this is using the =treasure-add-hydra=
+method to add your hydras to the =treasure-map-hydras= variable
+and then call =(treasure-bind-master-hydra)= to put everything from
+the =treasure-map-hydras= variable into a master hydra:
+
+#+BEGIN_SRC emacs-lisp :results none :exports code
+  (treasure-add-hydra '("p" hydra-treasure-proj/body
+			"Project management tools"))
+  (treasure-add-hydra '("h" hydra-my-help/body 
+			"Most useful help commands"))
+  (treasure-bind-master-hydra)
+  (global-set-key "\C-q?" 'hydra-treasure-map/body)
+#+END_SRC
+
+With the definition above, you can now use a single key-binding to
+explore your treasured commands via hydras.
 
 
 
