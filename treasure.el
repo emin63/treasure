@@ -22,11 +22,14 @@ treasure-add-hydra and treasure-bind-master-hydra for details."
 (defun treasure-add-hydra (hlist)
   "Add a hydra to the treasure-map-hydras variable.
 
-    The various components are as follows:
+The various components are as follows:
 
-      KEY:   String key to use for the map.
-      HYDRA: A hydra to call for the map.
-      REST:  Additional parts of a hydra
+    KEY:   String key to use for the map.
+    HYDRA: A hydra to call for the map.
+    REST:  Additional parts of a hydra
+
+An error is raised if the given KEY is already spoken for in
+the treasure-map-hydras variable.
       "
   (if (member (car hlist) (mapcar (lambda (x) (car x)) treasure-map-hydras))
       (error (format "Key %s already defined in treasure-map-hydras"
@@ -61,9 +64,8 @@ treasure-add-hydra and treasure-bind-master-hydra for details."
       (\"q\" (message \"quitting example hydra\") \"quit this hydra\")
     )
 
-      "
-	   ))
-
+      ")
+  )
 
 
 (defun treasure-find (my-map cmds)
@@ -78,7 +80,15 @@ list in the form (key cmd doc) where key is the key in my-map to
 run the cmd and doc is the first line of its docstring.
 
 This is useful as an intermediate tool to extract valuable commands
-from a keymap.
+from a keymap. For example, you can do something like
+
+(treasure-make-hoard 'hydra-my-help
+  (treasure-find help-map (list \"g\" 'where-is \"f\" \"k\" \"a\"))
+)
+
+where the second line is using treasure-find to extract out the desired
+commands from help-map and the first line is calling treasure-make-hoard
+to actually make the hydra with those commands.
   "
   (let ((results nil))
     (map-keymap
@@ -102,40 +112,65 @@ from a keymap.
     results)
   )
 
-;; if do-add is a character we add the new hydra to treasure-for-hydra
-;; with the given character binding
-(defun treasure-for-hydra (name my-map cmds &optional do-add hydra-help)
-  (let* ((hydra-map (treasure-find my-map cmds))
-	 (hydra-body `(defhydra ,name (:color teal :columns 1)
-			,(format "Define a treasure for hydra %s" name)
-			,@(mapcar (lambda (x) x) hydra-map))))
-    (eval hydra-body)
-    (if do-add 
-	(treasure-add-hydra (list do-add (intern (format "%s/body" name)) 
-				  (if hydra-help hydra-help (format "hydra for %s"name))))
-      )
-    )
-  )
-
-
 (defun treasure-setup (key cmd &optional help)
+  "Setup treasure to show help if it was not given.
+
+Usually hydras want a line like (KEY CMD HELP). But it is nice
+to be able to just provide (KEY CMD) and automatically lookup HELP
+from the doc string in CMD. By calling this as
+
+  (treasure KEY CMD HELP)
+
+where HELP is not nil you will simply get back (KEY CMD HELP).
+
+But if HELP is nil, then we return (KEY CMD DOC) where DOC is
+the first line of the doc string in CMD.
+"
   (list key cmd
 	(if help help
 	  (nth 0 (split-string (documentation cmd) "\n"))))
   )
 
   
-;; if do-add is a character we add the new hydra to treasure-for-hydra
+;; if do-add is a character we add the new hydra to treasure-map-hydras
 ;; with the given character binding
-(defun treasure-make-hoard (name hydra-data &optional hydra-help do-add)
-  (let* ((hydra-info
+(defun treasure-make-hoard (name hydra-data
+				 &optional hydra-help do-add no-top)
+  "Make a hydra to watch over a hoard of useful commands.
+
+The following are the arguments:
+
+  NAME:        A string name for the new hydra. Note that based on hydra
+               convention, you should call the hydra as name/body.
+  HYDRA-DATA:  A list of lists used to define the body of the hydra.
+               Each sub-list of HYDRA-DATA should be of the form
+               (KEY CMD HELP) providing the key to type to execute CMD
+               which is shown with the doc string HELP. If the HELP is
+               nil, the treasure-setup will try to look it up for you.
+
+Optional Arguments:
+
+  HYDRA-HELP:  Optional string doc for the hydra we create.
+  DO-ADD:      If this is a string key, then we call treasure-add-hydra
+               with DO-ADD as the key and the new hydra so you don't
+               have to manually do that.
+  NO-TOP:      If this is nil we add an entry to take the hydra back
+               to the top hydra-treasure-map/body. If this is non-nil
+               we do not add a top element.
+"
+  (let* ((hydra-info-base
 	  (mapcar
 	   (lambda (item) (apply 'treasure-setup item))
 	   hydra-data))
+	 (hydra-info (if no-top hydra-info-base
+		       (append hydra-info-base
+			       '(("!" hydra-treasure-map/body
+				  "Back to top-level hydra-treasure-map")))))
 	 (hydra-body
 	  `(defhydra ,name (:color teal :columns 1)
 	     ,(format (if hydra-help hydra-help
-			"Define a treasure for hydra %s" name))
+			"Define a treasure for hydra %s"
+			(if (symbolp name) (symbol-name name) name)))
 	     ,@(mapcar (lambda (x) x) hydra-info))))
    ;; (message hydra-info)
     (eval hydra-body)
@@ -151,7 +186,16 @@ from a keymap.
 (defun treasure-bind-master-hydra (&optional noaddquit)
   "Bind the master hydra.
 
-This will use eval to create hydra-treasure-map/body
+This will use eval to create hydra-treasure-map/body. It is intended
+that you call treasure-bind-master-hydra once you have added all
+your hydras to the treasure-map-hydras variable by calling
+the treasure-add-hydra function to create the master hydra.
+
+You can then bind hydra-treasure-map/body to the desired key and
+access all your hydras through that.
+
+If the optional noaddquit is provided, then we will not add a quit
+command to the master hydra
 "
   (let ((clean-hdata treasure-map-hydras)
 	)
@@ -161,13 +205,14 @@ This will use eval to create hydra-treasure-map/body
 	  (setq clean-hdata
 		(append clean-hdata
 			'(("q" (message "Exiting hydra")
-			   "quit hydra" :color blue))))))
-    (message "noqddquit=%s hdata=%s" noaddquit clean-hdata)
-    (eval `(defhydra hydra-treasure-map (:color teal :columns 1)
-	     "Top-level hydra to show your hydras.
+			   "quit hydra"))))))
+    (treasure-make-hoard 'hydra-treasure-map clean-hdata
+			 "Top-level hydra to show your hydras.
 "
-	     ,@(mapcar (lambda (x) x) clean-hdata)))
+			 nil 't
+			 )
     )
   )
+
 
 (provide 'treasure)
