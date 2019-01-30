@@ -120,7 +120,7 @@ make the documentation string as illustrated below:
   :hdoc-spc 2 ;; set double line spacing
 )
 (global-set-key "\C-qp"  ;; or whatever binding u want
-                'hydra-treasure-map/body) 
+                'hydra-treasure-prg/body) 
 #+end_src
 
 ** One hydra to rule them all
