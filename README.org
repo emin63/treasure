@@ -13,23 +13,46 @@ more easily discoverable. To use treasure, you do the following:
   5. Call =hydra-treasure-map/body= (or bind it to a key).
 
 
-* Usage
+* Quickstart
 
-After you install, make sure you require the =treasure= package
-somewhere in your init scripts:
-#+begin_src emacs-lisp :exports code
+After you install =treasure=, you can get started quickly by putting
+something like the following in your init script:
+
+#+begin_src emacs-lisp :exports code :results none
 (require 'treasure)
+(treasure-make-hoard 'hydra-my-help
+  (treasure-find help-map (list "g" 'where-is "f" "k" "a"))
+  "Useful things from help keymap" "h")
+(treasure-make-hoard 'hydra-treasure-proj
+  '(("s" projectile-switch-project "Switch projectile project; USEFUL!")
+    ("k" projectile-kill-buffers "Kill all project buffers; BE CAREFUL!")
+    ("g" projectile-grep)
+    ("m" magit)  ;; note that this is not from projectile keymap
+    ("q" (message "exited hydra") "quit hydra")
+   )
+ "Useful commands for project management" "p"
+)
+(treasure-bind-master-hydra)
+(global-set-key "\C-q?" ;; or bind to favorite key
+                'hydra-treasure-map/body) 
 #+end_src
+
+Then type =C-q ?= to execute the master =hydra-treasure-map/body= and
+you will see a small message in the min
+
+* Usage
 
 ** Simple Example
 
 The simplest way to use the =treasure= package is to create a hydra to
 show how to get some valuable commands in a given keymap:
+
 #+begin_src emacs-lisp :exports code :results none
-(treasure-for-hydra 'hydra-my-help help-map 
-    (list "g" 'where-is "f" "k" "a"))
+(treasure-make-hoard 'hydra-my-help
+  (treasure-find help-map (list "g" 'where-is "f" "k" "a")))
 (global-set-key "\C-qp" 'hydra-my-help/body) ;; replace w/ your own binding
 #+end_src
+
 The code above looks in =help-map=, finds commands which either match a
 given key like ="g"= or which match the symbol for a function
 like ='where-is= and creates a hydra to show these commands. When you
@@ -78,14 +101,38 @@ q: quit hydra
 #+END_EXAMPLE
 and we can choose the key for the desired command.
 
+** Example with fancy formatting
+
+Sometimes you may want fancier formatting options for your
+hydra displays. You can of course manualy create your docstring,
+but you can also specify some plist values such as =:hdoc-spc=
+to ask =treasure-make-hoard= to call =treasure-hydra-doc= to 
+make the documentation string as illustrated below:
+#+begin_src emacs-lisp :exports code :results none
+(treasure-make-hoard 'hydra-treasure-prg
+  '(
+   ("c" compile)
+   ("g" grep)
+   ("q" (message "quitting hydra") "exit the hydra")
+   )
+  nil         ;; set docs to nil to autogenerate
+  "c"         ;; set this to be the "c" key for treasure-bind-master-hydra
+  :hdoc-spc 2 ;; set double line spacing
+)
+(global-set-key "\C-qp"  ;; or whatever binding u want
+                'hydra-treasure-map/body) 
+#+end_src
 
 ** One hydra to rule them all
 
 If you create many hydras, it's useful to collect them all into one
-master hydra. One way to do this is using the =treasure-add-hydra=
-method to add your hydras to the =treasure-map-hydras= variable
-and then call =(treasure-bind-master-hydra)= to put everything from
-the =treasure-map-hydras= variable into a master hydra:
+master hydra. One way to do this is to provide the a value for the
+=DO-ADD= argument in calling =treasure-make-hoard= as we did for
+=hydra-treasure-prg=. Another option is later use the
+=treasure-add-hydra= method to add your already created hydras to the
+=treasure-map-hydras= variable and then call
+=(treasure-bind-master-hydra)= to put everything from the
+=treasure-map-hydras= variable into a master hydra:
 
 #+BEGIN_SRC emacs-lisp :results none :exports code
   (treasure-add-hydra '("p" hydra-treasure-proj/body
@@ -97,7 +144,7 @@ the =treasure-map-hydras= variable into a master hydra:
 #+END_SRC
 
 With the definition above, you can now use a single key-binding to
-explore your treasured commands via hydras.
+explore your treasured commands via hydras!
 
 
 
