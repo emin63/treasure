@@ -1,12 +1,6 @@
 
 
-
-;; FIXME:  Use the following to get first doc line of a symbol
-;; (nth 0 (split-string (documentation 'quoted-insert) "\n"))
-;; FIXME: can lookup through keymap with something like
-;; (map-keymap (lambda (a b) (message "a is %s and b is %s of type %s with doc %s" a b (type-of b) (nth 0 (split-string (documentation 'quoted-insert) "\n")))) my-mode-map)
-
-(makunbound 'treasure-map-hydras) ;; uncomment when testing for reloading
+;;(makunbound 'treasure-map-hydras) ;; uncomment when testing for reloading
 
 (defvar treasure-map-hydras 
   '(("q" (message "quit") "quit hydra" :exit t :color blue))
@@ -159,18 +153,18 @@ from a keymap.
   )
 
 
-(treasure-for-hydra 'hydra-test-fixme my-mode-map 
-		    (list "a" "g" "f" "h") "o" "Example dynamic hydra")
+(defun treasure-bind-master-hydra ()
+  "Bind the master hydra.
 
-;;    (treasure-add-hydra 
-;;	'(";" hydra-test-fixme/body "FIXME test dynamic hydra"))
-(treasure-add-hydra 
- '("h" hydra-treasure-map-help/body "help on hydras"))
-(treasure-add-hydra 
- '("t" hydra-treasure-map-help/body "help on hydras again"))
+This will use eval to create hydra-treasure-map/body
+"
+  (eval `(defhydra hydra-treasure-map (:color teal :columns 1)
+	   "Master hydra
 
-(eval `(defhydra hydra-treasure-map (:color teal :columns 1)
-	 "Fast links by projects stuff"
-	 ,@(mapcar (lambda (x) x) treasure-map-hydras)))
+Top-level hydra created by treasure-bind-master-hydra
+to show your hydras.
+"
+	   ,@(mapcar (lambda (x) x) treasure-map-hydras)))
+  )
 
 (provide 'treasure)
