@@ -1,3 +1,6 @@
 
 # Ignore emacs files
 *~
+
+# Ignore complied elisp
+*.elc
