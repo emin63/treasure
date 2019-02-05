@@ -246,7 +246,7 @@ PLIST ARGUMENS:
   )
 
 
-(defun treasure-bind-master-hydra (&optional noaddquit)
+(defun treasure-bind-master-hydra (&optional noaddquit &rest body-plist)
   "Bind the master hydra.
 
 This will use eval to create hydra-treasure-map/body. It is intended
@@ -258,10 +258,15 @@ You can then bind hydra-treasure-map/body to the desired key and
 access all your hydras through that.
 
 If the optional noaddquit is provided, then we will not add a quit
-command to the master hydra
+command to the master hydra.
+
+This takes a plist which is passed to treasure-make-hoard for creating
+the master hydra. One useful thing to pass in is :hdoc-spc if you want
+wider line spacing.
 "
   (let ((clean-hdata treasure-map-hydras)
 	)
+    (if (not body-plist) (setq body-plist (plist-put body-plist :no-top 't)))
     (if (not noaddquit)
 	(if (member "q" (mapcar 'car clean-hdata))
 	    (error "Cannot add quit command; treasure-map-hydras has 'q' cmd")
@@ -269,10 +274,10 @@ command to the master hydra
 		(append clean-hdata
 			'(("q" treasure-say-exit
 			   "quit hydra"))))))
-    (treasure-make-hoard 'hydra-treasure-map clean-hdata
+    (apply 'treasure-make-hoard 'hydra-treasure-map clean-hdata
 			 "Top-level hydra to show your hydras.
 "
-			 nil :no-top 't
+			 nil body-plist
 			 )
     )
   )
