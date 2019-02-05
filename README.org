@@ -146,7 +146,11 @@ master hydra. One way to do this is to provide the a value for the
 With the definition above, you can now use a single key-binding to
 explore your treasured commands via hydras!
 
+** A few more tricks
 
+  - If you call =(treasure-bind-master-hydra nil :hdoc-spc 2)= instead
+    of =(treasure-bind-master-hydra)= you can get the resulting
+    docstring to be double-spaced which can make things easier to read.
 
 
 
